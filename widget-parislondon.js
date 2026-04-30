@@ -663,7 +663,7 @@
             color: #666;
         }
         .q-quantic-logo {
-            height: 22px;
+            height: 32px;
             filter: brightness(0);
         }
     `;
