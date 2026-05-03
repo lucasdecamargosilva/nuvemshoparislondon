@@ -527,7 +527,7 @@
                     <!-- Persistent header (all steps) -->
                     <div id="q-header-provador">
                         <h1>Provador Virtual</h1>
-                        <img src="https://d1a9qnv764bsoo.cloudfront.net/stores/005/505/377/themes/common/logo-6027012326612396269-1772237299-385d1150918c4c1b0b5cb2aed6f6ab551772237299.png?0" alt="Paris London" style="height:56px;width:auto;"/>
+                        <img src="https://d1a9qnv764bsoo.cloudfront.net/stores/005/505/377/themes/common/logo-6027012326612396269-1772237299-385d1150918c4c1b0b5cb2aed6f6ab551772237299.png?0" alt="Paris London" style="height:46px;width:auto;"/>
                     </div>
 
                     <!-- Main step -->
