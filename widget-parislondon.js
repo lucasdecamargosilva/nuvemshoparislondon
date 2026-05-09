@@ -8,7 +8,7 @@
     const WEBHOOK_PROVA = 'https://n8n.segredosdodrop.com/webhook/gerador-oculos';
     const WEBHOOK_PIX = 'https://n8n.segredosdodrop.com/webhook/cacife-pix';
     const WEBHOOK_PIX_STATUS = 'https://n8n.segredosdodrop.com/webhook/cacife-pix-status';
-    const WEBHOOK_CHECK_LIMIT = 'https://n8n.segredosdodrop.com/webhook/califa-check-limit';
+    const WEBHOOK_CHECK_LIMIT = 'https://n8n.segredosdodrop.com/webhook/paris-london-check-limit';
     const SIZES_TOP = ['XXP', 'XP', 'P', 'M', 'G', 'XG', 'XXG', '3XG', '4XG', '5XG'];
     const SIZES_BOTTOM = ['36/XXP', '38/XP', '40/P', '42/M', '44/G', '46/XG', '48/XXG', '50/3XG', '52/4XG', '54/5XG'];
     const SIZES_BOTTOM_SW = ['XXP', 'XP', 'P', 'M', 'G', 'XG', 'XXG', '3XG', '4XG', '5XG'];
@@ -238,6 +238,23 @@
         }
         .q-input:focus { border-color: var(--c-ink); background: #fff; }
         .q-input::placeholder { color: #bbb; }
+        .q-provas-msg:empty { display: none; }
+        .q-provas-msg {
+            font-size: 13px; margin-top: 10px; letter-spacing: 0.3px;
+            color: var(--c-ink); font-weight: 500;
+            background: var(--c-surface);
+            border: 1px solid var(--c-line);
+            border-radius: 6px;
+            padding: 10px 14px;
+            text-align: center;
+            transition: background 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .q-provas-msg.is-warn {
+            color: var(--c-danger);
+            background: rgba(204,51,51,0.08);
+            border-color: rgba(204,51,51,0.3);
+            font-weight: 600;
+        }
         .q-status-msg {
             display: none; font-size: 11px; color: var(--c-danger);
             font-weight: 500; margin-top: 6px; letter-spacing: 0.3px;
@@ -537,6 +554,7 @@
                             <span class="q-field-label">Seu WhatsApp</span>
                             <input type="tel" id="q-phone" class="q-input" placeholder="(11) 99999-9999" maxlength="15">
                             <div id="q-phone-error" class="q-status-msg">N&#250;mero inv&#225;lido</div>
+                            <div id="q-provas-restantes" class="q-provas-msg"></div>
                         </div>
 
                         <!-- Photo section -->
@@ -611,6 +629,7 @@
                             <img id="q-final-view-img">
                         </div>
                         <div id="q-result-actions-col">
+                            <div id="q-provas-restantes-result" class="q-provas-msg" style="text-align:center;margin-bottom:8px;"></div>
                             <button class="q-btn-outline" id="q-btn-back">Voltar ao Produto</button>
                             <button class="q-btn-black q-res-mobile-only" id="q-retry-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;">
                                 <i class="ph ph-camera"></i> Tentar outra foto
@@ -861,6 +880,7 @@
             }
             modal.style.display = 'flex';
             lockBodyScroll();
+            if (typeof _checkProvasRestantes === 'function') _checkProvasRestantes();
         }
 
 
@@ -983,6 +1003,37 @@
             e.target.value = !x[2] ? x[1] : '(' + x[1] + ') ' + x[2] + (x[3] ? '-' + x[3] : '');
             checkPhoneStep();
         });
+
+        // ── Contador de provas restantes (debounced) ──
+        let _provasDebounce;
+        async function _checkProvasRestantes() {
+            const _els = document.querySelectorAll('.q-provas-msg');
+            if (!_els.length) return;
+            const nums = phoneInput.value.replace(/\D/g, '');
+            const phoneOk = (nums.length === 10 || nums.length === 11) && /^[1-9][1-9]/.test(nums) && (nums.length === 10 || nums[2] === '9');
+            const phone = phoneOk ? '55' + nums : '0';
+            try {
+                const r = await fetch(WEBHOOK_CHECK_LIMIT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone })
+                });
+                const d = await r.json();
+                const used = Math.max(d.phone_count || 0, d.ip_count || 0, d.count || 0);
+                const restantes = Math.max(0, 3 - used);
+                if (restantes > 0) {
+                    const _txt = restantes + (restantes === 1 ? ' prova restante hoje' : ' provas restantes hoje');
+                    _els.forEach(el => { el.textContent = _txt; el.classList.remove('is-warn'); });
+                } else {
+                    _els.forEach(el => { el.textContent = 'Limite de 3 provas atingido — pague R$1 via PIX para mais uma.'; el.classList.add('is-warn'); });
+                }
+            } catch(_) { _els.forEach(el => { el.textContent = ''; el.classList.remove('is-warn'); }); }
+        }
+        phoneInput.addEventListener('input', () => {
+            clearTimeout(_provasDebounce);
+            _provasDebounce = setTimeout(_checkProvasRestantes, 600);
+        });
+
 
         function checkPhoneStep() {
             const nums = phoneInput.value.replace(/\D/g, '');
@@ -1178,6 +1229,7 @@
                     document.querySelector('.q-card-ia').classList.add('is-result');
                     document.getElementById('q-step-result').style.display = 'flex';
                     loadRelatedProducts();
+                    if (typeof _checkProvasRestantes === 'function') _checkProvasRestantes();
                 } else if (res.status === 401 || res.status === 403) {
                     document.getElementById('q-loading-box').style.display = 'none';
                     photoStep.style.display = 'flex';
